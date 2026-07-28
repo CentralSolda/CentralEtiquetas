@@ -4,11 +4,13 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+from layouts.etiqueta50x25 import Layout50x25
+from layouts.etiqueta75x25 import Layout75x25
 from layouts.etiqueta75x35 import Layout75x35
 from utils.etiquetas import GeradorEtiquetas
 from utils.excel import ler_produtos
 from utils.pdf import ler_tabela_precos
-from utils.precos import arredondar_preco, formatar_brl
+from utils.precos import arredondar_preco
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -90,6 +92,16 @@ class CentralEtiquetasApp:
         state = "disabled" if busy else "normal"
         self.btn_gerar.config(state=state)
 
+    def _ler_modelo(self):
+        modelo = self.modelo.get()
+        if modelo == "75x35":
+            return Layout75x35()
+        if modelo == "75x25":
+            return Layout75x25()
+        if modelo == "50x25":
+            return Layout50x25()
+        raise ValueError("Modelo inválido.")
+
     def gerar(self):
         if not self.produtos_path.get():
             messagebox.showwarning("Central Etiquetas", "Selecione a lista de produtos.")
@@ -136,13 +148,14 @@ class CentralEtiquetasApp:
             self.root.update_idletasks()
 
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            output_file = OUTPUT_DIR / "etiquetas_central_solda_75x35.pdf"
+            modelo = self.modelo.get()
+            output_file = OUTPUT_DIR / f"etiquetas_central_solda_{modelo}.pdf"
 
             gerador = GeradorEtiquetas(logo_path=str(LOGO_PATH) if LOGO_PATH.exists() else None)
             resultado = gerador.gerar_pdf(
                 produtos=produtos_para_imprimir,
                 caminho_saida=str(output_file),
-                modelo=self.modelo.get(),
+                modelo=modelo,
             )
 
             self.progress["value"] = 100
@@ -150,6 +163,7 @@ class CentralEtiquetasApp:
 
             resumo = (
                 f"PDF gerado com sucesso!\n\n"
+                f"Modelo: {modelo}\n"
                 f"Produtos lidos: {len(produtos)}\n"
                 f"Etiquetas geradas: {resultado.total_etiquetas}\n"
                 f"Produtos sem preço: {len(sem_preco)}\n"
